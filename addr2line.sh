@@ -11,6 +11,16 @@ touch $3
 work_dir="$1"
 log_file="$3"
 
+# DEBUG_ON=1
+
+function DEBUG()
+{
+    if [ -z "${DEBUG_ON}" ]; then
+        return
+    fi
+    echo $@
+}
+
 old_ratio=-1
 function progress_bar()
 {
@@ -45,15 +55,18 @@ function parse_wrap_line()
 	call_bin="${work_dir}/${call_sym}"
 	call_addr=$(echo $1 | awk -F"::::" '{print $2}')
 
+    DEBUG "input[$1] call_sym[${call_sym}] call_bin[${call_bin}] call_addr[${call_addr}]"
+
 	this="$(echo $1 | awk -F"::::" '{print $3}')"
     call=$(addr2line -e $call_bin -f $call_addr -s -p)
     if [ $? -ne 0 ]; then
-        echo "line : $line"
-        echo "addr2line -e $call_bin -f $call_addr -s -p"
+        echo "ERROR: line[$line] cmd[addr2line -e $call_bin -f $call_addr -s -p]"
         exit 1
     fi
 
-	# call=$(addr2line -e $call_bin -f $call_addr -s -p | c++filt 2>/dev/null)
+	call=$(addr2line -e $call_bin -f $call_addr -s -p | c++filt 2>/dev/null)
+
+    DEBUG "call[${call}] this[${this}]"
 }
 
 function parse_line()
@@ -66,15 +79,24 @@ function parse_line()
 	this_bin="${work_dir}/${this_sym}"
 	this_addr=$(echo $2 | awk -F: '{print $2}')
 
+    DEBUG "input[$1] call_sym[${call_sym}] call_bin[${call_bin}] call_addr[${call_addr}]"
+    DEBUG "input[$1] this_sym[${this_sym}] this_bin[${this_bin}] this_addr[${this_addr}]"
+
     call="???"
     if [ -f $call_bin ]; then
         call=$(addr2line -e $call_bin -f $call_addr -s -p | c++filt 2>/dev/null)
+    else
+        echo "WARN: Can't find ${call_bin}"
     fi
 
     this="???"
     if [ -f $this_bin ]; then
         this=$(addr2line -e $this_bin -f $this_addr -s -p | c++filt 2>/dev/null)
+    else
+        echo "WARN: Can't find ${this_bin}"
     fi
+
+    DEBUG "call[${call}] this[${this}]"
 }
 
 acct_sum=$(wc -l $2 | awk '{print $1}')

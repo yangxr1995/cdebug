@@ -5,15 +5,16 @@ extern "C" {
 
 #endif
 
+#define _GNU_SOURCE
+#include <link.h>
+#include <dlfcn.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <sys/stat.h>
 #include <stdio.h>
 #include <execinfo.h>
 #include <string.h>
-#include <ctype.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -68,15 +69,24 @@ confirm_addr_info(void *orig_addr, void **paddr, char **psym);
 #undef WRAP_REPLACE
 #endif
 
-wrap_define(pid_t, fork)
+#endif
+
+// wrap_define(pid_t, fork)
+pid_t __real_fork();
+pid_t __wrap_fork()
 {
     int ret;
-    log_wrap_lib_info("fork()");
+    if (access(ctx.trace_on, F_OK) == 0) {
+        char buf[256] = {0}, *call_sym;
+        void *call;
+        confirm_addr_info(__builtin_return_address(0) - sizeof(void *), &call, &call_sym);
+        snprintf(buf, sizeof(buf) - 1, "%s::::%p::::" "fork()" "\n", call_sym, call);
+        log_append(buf);
+    }
     if ((ret = __real_fork()) == 0)
         ctx.pid = getpid();
     return ret;
 }
-#endif
 
 __attribute__((__no_instrument_function__))
 static void
@@ -95,6 +105,18 @@ log_append(const char *str)
 }
 
 __attribute__((__no_instrument_function__))
+void *convert_to_elf(void *addr) 
+{
+    Dl_info info;
+    int result = dladdr(addr, &info);
+    if (result == 0) {
+        return NULL; // 解析失败
+    }
+    uintptr_t offset = (uintptr_t)addr - (uintptr_t)info.dli_fbase;
+    return (void *)offset;
+}
+
+__attribute__((__no_instrument_function__))
 inline static int
 confirm_addr_info(void *orig_addr, void **paddr, char **psym)
 {
@@ -110,16 +132,7 @@ confirm_addr_info(void *orig_addr, void **paddr, char **psym)
 
             is_find = 1;
 			sym = ctx.text_maps[i].name;
-
-            addr = orig_addr;
-            // 动态库需要偏移
-			if (strcmp(sym, ctx.name) != 0)
-				addr -= ctx.text_maps[i].begin;
-#ifdef USE_PIE
-            // 使用pie时，进程.text需要偏移
-            else
-                addr -= ctx.text_maps[i].begin;
-#endif
+            addr = convert_to_elf(orig_addr);
             break;
 		}
 
