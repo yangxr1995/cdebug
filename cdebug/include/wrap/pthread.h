@@ -13,7 +13,7 @@ wrap_define(int, pthread_create, pthread_t *thread, const pthread_attr_t *attr,
     void *this; 
     int ret;
 
-    /*ret = __real_pthread_create(thread, attr, start_routine, arg);*/
+    ret = __real_pthread_create(thread, attr, start_routine, arg);
     confirm_addr_info((void *)start_routine, &this, &this_sym); 
     log_wrap_lib_info("pthread_create([%s]%p tid[%lu]", this_sym, this, *thread);
 

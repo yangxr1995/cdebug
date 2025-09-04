@@ -42,5 +42,5 @@ install(TARGETS ${PROJECT_NAME}
 # 安装config信息
 install(EXPORT ${PROJECT_NAME}
     FILE ${PROJECT_NAME}Config.cmake 
-    DESTINATION config
+    DESTINATION lib/config
 )

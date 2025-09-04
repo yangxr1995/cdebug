@@ -6,8 +6,6 @@ aux_source_directory(./  SRCS)
 
 add_executable(${PROJECT_NAME} ${SRCS}) 
 
-find_package(cdebug REQUIRED)
-
 find_package(cdebug)
 if (cdebug_FOUND)
     message("cdebug found success!")
