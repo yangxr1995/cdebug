@@ -30,5 +30,17 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
-add_executable(trace ${CMAKE_CURRENT_LIST_DIR}/test/test-trace.c)
-target_link_libraries(trace ${PROJECT_NAME})
+install(TARGETS ${PROJECT_NAME}
+
+    # 生成config信息
+    EXPORT ${PROJECT_NAME}
+
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+)
+
+# 安装config信息
+install(EXPORT ${PROJECT_NAME}
+    FILE ${PROJECT_NAME}Config.cmake 
+    DESTINATION config
+)
