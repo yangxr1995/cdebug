@@ -135,11 +135,11 @@ wrap_define(int, select, int nfds, fd_set *readfds, fd_set *writefds,
     return __real_select(nfds, readfds, writefds, exceptfds, timeout);
 }
 
-wrap_define(int, epoll_wait, int epfd, struct epoll_event *events, int maxevents, int timeout)
-{
-    log_wrap_lib_info("epoll_wait(epfd[%d], events[%p], maxevents[%d], timeout[%d])", epfd, events, maxevents, timeout);
-    return __real_epoll_wait(epfd, events, maxevents, timeout);
-}
+// wrap_define(int, epoll_wait, int epfd, struct epoll_event *events, int maxevents, int timeout)
+// {
+//     log_wrap_lib_info("epoll_wait(epfd[%d], events[%p], maxevents[%d], timeout[%d])", epfd, events, maxevents, timeout);
+//     return __real_epoll_wait(epfd, events, maxevents, timeout);
+// }
 
 #elif defined(WRAP_REPLACE)
 
@@ -156,7 +156,7 @@ wrap_define(int, epoll_wait, int epfd, struct epoll_event *events, int maxevents
 #define unlink(pathname)       __real_unlink(pathname)
 #define access(pathname, mode) __real_access(pathname, mode)
 #define select(nfds, readfds, writefds, exceptfds, timeout) __real_select(nfds, readfds, writefds, exceptfds, timeout)
-#define epoll_wait(epfd, events, maxevents, timeout)        __real_epoll_wait(epfd, events, maxevents, timeout)
+// #define epoll_wait(epfd, events, maxevents, timeout)        __real_epoll_wait(epfd, events, maxevents, timeout)
 #define fclose(stream)         __real_fclose(stream)
 
 #endif

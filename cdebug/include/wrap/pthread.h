@@ -20,8 +20,39 @@ wrap_define(int, pthread_create, pthread_t *thread, const pthread_attr_t *attr,
     return ret;
 }
 
+// int pthread_mutex_lock(pthread_mutex_t *mutex);
+wrap_define(int, pthread_mutex_lock, pthread_mutex_t *mutex)
+{
+    int ret;
+    ret = __real_pthread_mutex_lock(mutex);
+    log_wrap_lib_info("pthread_mutex_lock(%p) = %d", mutex, ret);
+    return ret;
+}
+
+// int pthread_mutex_trylock(pthread_mutex_t *mutex);
+wrap_define(int, pthread_mutex_trylock, pthread_mutex_t *mutex)
+{
+    int ret;
+    ret = __real_pthread_mutex_trylock(mutex);
+    log_wrap_lib_info("pthread_mutex_trylock(%p) = %d", mutex, ret);
+    return ret;
+}
+
+// int pthread_mutex_unlock(pthread_mutex_t *mutex);
+wrap_define(int, pthread_mutex_unlock, pthread_mutex_t *mutex)
+{
+    int ret;
+    ret = __real_pthread_mutex_unlock(mutex);
+    log_wrap_lib_info("pthread_mutex_unlock(%p) = %d", mutex, ret);
+    return ret;
+}
+
 #else
 
+// 添加下面函数的 define
+#define pthread_mutex_lock(mutex)           __real_pthread_mutex_lock(mutex)
+#define pthread_mutex_trylock(mutex)        __real_pthread_mutex_trylock(mutex)
+#define pthread_mutex_unlock(mutex)         __real_pthread_mutex_unlock(mutex)
 #define pthread_create(thread, attr, start_routine, arg)   __real_pthread_create(thread, attr, start_routine, arg)
 
 #endif
