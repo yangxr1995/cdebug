@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libcdebug
+Description: A sample library with many options
+Version: @PROJECT_VERSION@
+Cflags: @LIB_CDEBUG_CFLAGS@ -I${includedir}
+Libs: @LIB_CDEBUG_LDFLAGS@ -L${libdir} -lcdebug

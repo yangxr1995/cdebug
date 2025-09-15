@@ -1,0 +1,5 @@
+# liba 的编译选项
+LIB_CDEBUG_CFLAGS = @cdebug_CFLAGS@ -I@CMAKE_INSTALL_PREFIX@/include
+
+# liba 的链接选项
+LIB_CDEBUG_LDFLAGS = @cdebug_LDFLAGS@ -L@CMAKE_INSTALL_PREFIX@/lib -lcdebug
