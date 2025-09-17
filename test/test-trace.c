@@ -21,6 +21,7 @@ void func2() {
 }
 
 void func1() {
+    printf("%s %d\n", __func__, __LINE__);
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     close(fd);
     func2();
@@ -63,17 +64,24 @@ void test_epoll() {
     }
 }
 
-void test_pthread() {
-    pthread_mutex_t mutex;
-    pthread_mutex_init(&mutex, NULL);
+void *start_thread(void *arg)
+{
+    func1();
+    printf("%s %d\n", __func__, __LINE__);
+    return NULL;
+}
 
-    pthread_mutex_lock(&mutex);
-    pthread_mutex_trylock(&mutex);
-    pthread_mutex_unlock(&mutex);
+void test_pthread() {
+    pthread_t tid;
+    pthread_create(&tid, NULL, start_thread, NULL);
+    while (1) {
+        sleep(1);
+    }
 }
 
 int main(int argc, char *argv[])
 {
+    // func1();
     // test_epoll();
     test_pthread();
     // pid_t pid;

@@ -13,7 +13,12 @@ extern int __real_access(const char *path, int amode);
         void *call; \
         confirm_addr_info(__builtin_return_address(0) - sizeof(void *), &call, &call_sym); \
         snprintf(buf, sizeof(buf) - 1, "%s::::%p::::" format "\n", call_sym, call, ## __VA_ARGS__); \
-        log_append(buf); \
+        if (print_filter_ctx) { \
+            print_filter_run(0, buf); \
+        } \
+        else { \
+            log_append(buf); \
+        } \
     } \
 } while (0)
 

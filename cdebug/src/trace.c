@@ -23,6 +23,10 @@ extern "C" {
 #include <assert.h>
 #include <pthread.h>
 
+
+static inline void __attribute__((__no_instrument_function__))
+print_filter_run(char is_find, char *newdata);
+
 #include "trace.h"
 
 typedef struct map_s {
@@ -50,6 +54,44 @@ static void log_append(const char *str);
 __attribute__((__no_instrument_function__))
 inline static int
 confirm_addr_info(void *orig_addr, void **paddr, char **psym);
+
+// init -> kcached -> find -> flush -> kdirect -> cnt == 0 -> kcached
+// kcached -> find 1 -> flush -> kdirect
+// kcached -> find 0 -> kcached
+// kdirect -> find 1 -> cnt reset -> kdirect
+// kdirect -> find 0 -> cnt-- -> cnt == 0 -> kcached
+typedef enum print_filter_work_mode {
+    kcached,
+    kdirect,
+} print_filter_work_mode_t;
+
+#define QUEUE_SIZE 30
+#define QUEUE_ITEM_SIZE 256
+#define QUEUE_TRACE_MAX_COUNT 10
+
+typedef struct print_filter {
+    print_filter_work_mode_t mode;
+    char queue_buffer[QUEUE_SIZE][QUEUE_ITEM_SIZE];
+    int begin;
+    int end;
+    int trace_count;
+} print_filter_t;
+
+print_filter_t __thread *print_filter_ctx;
+
+#define PRINT_FILTER_TRACE_COUNT 2
+#define PRINT_FILTER_KEYWORDS_MAX_NB 1024
+
+void *print_filter_keyaddr[PRINT_FILTER_KEYWORDS_MAX_NB];
+int print_filter_keyaddr_nb;
+
+__attribute__((__no_instrument_function__))
+inline static void 
+print_filter_keyaddr_print() {
+    for (int i = 0; i < print_filter_keyaddr_nb; ++i) {
+        printf("%p\n", print_filter_keyaddr[i]);
+    }
+}
 
 #ifdef WRAP_TURN_ON
 
@@ -81,7 +123,12 @@ pid_t __wrap_fork()
         void *call;
         confirm_addr_info(__builtin_return_address(0) - sizeof(void *), &call, &call_sym);
         snprintf(buf, sizeof(buf) - 1, "%s::::%p::::" "fork()" "\n", call_sym, call);
-        log_append(buf);
+        if (print_filter_ctx) {
+            print_filter_run(0, buf);
+        }
+        else {
+            log_append(buf);
+        }
     }
     if ((ret = __real_fork()) == 0)
         ctx.pid = getpid();
@@ -148,6 +195,72 @@ confirm_addr_info(void *orig_addr, void **paddr, char **psym)
     return 0;
 }
 
+static inline char __attribute__((__no_instrument_function__))
+print_filter_keyaddr_check(void *target)
+{
+    for (int i = 0; i < print_filter_keyaddr_nb; ++i) {
+        if (print_filter_keyaddr[i] == target)
+            return 1;
+    }
+    return 0;
+}
+
+#define QUEUE_INDEX_WALK(__index) \
+do { \
+    ++(__index); \
+    (__index) = (__index) % QUEUE_SIZE; \
+} while(0)
+
+static inline void __attribute__((__no_instrument_function__))
+print_filter_flush()
+{
+    while (print_filter_ctx->begin != print_filter_ctx->end) {
+        log_append(print_filter_ctx->queue_buffer[print_filter_ctx->begin]);
+        print_filter_ctx->queue_buffer[print_filter_ctx->begin][0] = 0;
+        QUEUE_INDEX_WALK(print_filter_ctx->begin);
+    }
+}
+
+static inline void __attribute__((__no_instrument_function__))
+print_filter_cache(char *data)
+{
+    strncpy(print_filter_ctx->queue_buffer[print_filter_ctx->end], data, QUEUE_ITEM_SIZE - 1);
+    QUEUE_INDEX_WALK(print_filter_ctx->end);
+    if (print_filter_ctx->begin == print_filter_ctx->end) {
+        QUEUE_INDEX_WALK(print_filter_ctx->begin);
+    }
+}
+
+static inline void __attribute__((__no_instrument_function__))
+print_filter_run(char is_find, char *newdata)
+{
+    // printf("%s %d : find[%d] mode[%d] trace_count[%d] \n", 
+    //         __func__, __LINE__, is_find, print_filter_ctx->mode, print_filter_ctx->trace_count);
+    if (print_filter_ctx->mode == kcached) {
+        if (is_find) {
+            print_filter_flush();
+            print_filter_ctx->mode = kdirect;
+            print_filter_ctx->trace_count = PRINT_FILTER_TRACE_COUNT;
+            log_append(newdata);
+        }
+        else {
+            print_filter_cache(newdata);
+        }
+
+    }
+    else if (print_filter_ctx->mode == kdirect) {
+        log_append(newdata);
+        if (is_find) {
+            print_filter_ctx->trace_count = PRINT_FILTER_TRACE_COUNT;
+        }
+        else {
+            print_filter_ctx->trace_count--;
+            if (print_filter_ctx->trace_count == 0)
+                print_filter_ctx->mode = kcached;
+        }
+    }
+}
+
 static inline void __attribute__((__no_instrument_function__))
 __trace_running(const char *msg, void *this, void *call)
 {
@@ -158,7 +271,14 @@ __trace_running(const char *msg, void *this, void *call)
 
     char data[256];
     snprintf(data, sizeof(data), "%s\n%s:%p\n%s:%p\n", msg, call_sym, call, this_sym, this);
-    log_append(data);
+    // check filter
+    if (print_filter_ctx) {
+        int is_find = print_filter_keyaddr_check(this) || print_filter_keyaddr_check(call);
+        print_filter_run(is_find, data);
+    }
+    else {
+        log_append(data);
+    }
 }
 
 static inline void __attribute__((__no_instrument_function__))
@@ -289,12 +409,61 @@ prg_info_init()
     get_task_maps();
 }
 
+__attribute__((__no_instrument_function__))
+inline static void 
+print_filter_keyaddr_push(void *addr)
+{
+    print_filter_keyaddr[print_filter_keyaddr_nb] = addr;
+    ++print_filter_keyaddr_nb;
+}
+
+__attribute__((__no_instrument_function__))
+inline static void 
+print_filter_ctx_init()
+{
+    if (print_filter_keyaddr_nb > 0) {
+        print_filter_ctx = malloc(sizeof(*print_filter_ctx));
+        memset(print_filter_ctx, 0x0, sizeof(*print_filter_ctx));
+        print_filter_ctx->mode = kcached;
+        print_filter_ctx->trace_count = 0;
+    }
+}
+
+__attribute__((__no_instrument_function__))
+inline static void 
+print_filter_init()
+{
+    char filter_filename[256] = {0};
+    char line[1024];
+
+    snprintf(filter_filename, sizeof(filter_filename), "/var/run/filter_%s", ctx.name);
+    FILE *fp = fopen(filter_filename, "r");
+    if (!fp) {
+        return ;
+    }
+
+    unsigned long long addr_ll;
+    uintptr_t addr;
+    while (fgets(line, sizeof(line), fp)) {
+        addr_ll = strtoll(line, NULL, 16);
+        addr = (uintptr_t) addr_ll;
+        print_filter_keyaddr_push((void *)addr);
+    }
+
+    fclose(fp);
+
+    // print_filter_keyaddr_print();
+
+    print_filter_ctx_init();
+}
+
 __attribute__((constructor)) 
 __attribute__((__no_instrument_function__))
 inline static void 
 init()
 {
     prg_info_init();
+    print_filter_init();
 }
 
 #ifdef __cplusplus
