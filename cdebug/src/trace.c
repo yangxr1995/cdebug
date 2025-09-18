@@ -121,6 +121,7 @@ print_filter_keyaddr_print() {
 
 // wrap_define(pid_t, fork)
 pid_t __real_fork();
+__attribute__((__no_instrument_function__))
 pid_t __wrap_fork()
 {
     int ret;
