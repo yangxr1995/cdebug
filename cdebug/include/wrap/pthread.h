@@ -20,9 +20,11 @@ static void *default_start_routine(void *arg)
     thread_info_t *info = (thread_info_t *)arg;
     void *(*start_func)(void *) = info->func;
     void *user_arg = info->arg;
+    print_filter_ctx = NULL;
     if (info->filter_ctx) {
-        print_filter_ctx = malloc(sizeof(*print_filter_ctx));
-        memcpy(print_filter_ctx, info->filter_ctx, sizeof(print_filter_t));
+        print_filter_ctx_init();
+        // print_filter_ctx = malloc(sizeof(*print_filter_ctx));
+        // memcpy(print_filter_ctx, info->filter_ctx, sizeof(print_filter_t));
     }
     sem_post(&info->sem);
     return start_func(user_arg);

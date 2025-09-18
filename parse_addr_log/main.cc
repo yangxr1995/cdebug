@@ -30,10 +30,11 @@ class InfoBlock {
         InfoBlock(InfoBlockType type, std::string data = "") 
             : type_(type)
             , data_(data)
-            , pos_(nullptr)
             , dataHashVal_(0)
             , repeatCount_(0)
             , mapKey_("")
+            , pos_set_(false)
+            , mpos_set_(false)
             {
                 updateDataHashVal();
             }
@@ -67,12 +68,22 @@ class InfoBlock {
         }
 
         void setPos(std::list<InfoBlock *>::iterator pos) {
+            pos_set_ = true;
             pos_ = std::move(pos);
         }
 
         // void setMPos(std::unordered_multimap<std::string, InfoBlock *>::iterator mpos) {
         void setMPos(std::multimap<std::string, InfoBlock *>::iterator mpos) {
+            mpos_set_ = true;
             mpos_ = std::move(mpos);
+        }
+
+        bool mpos_set() const {
+            return mpos_set_;
+        }
+
+        bool pos_set() const {
+            return pos_set_;
         }
 
         // const std::unordered_multimap<std::string, InfoBlock *>::iterator & mPos() const {
@@ -118,8 +129,10 @@ class InfoBlock {
         InfoBlockType type_;
         std::string data_;
         std::list<InfoBlock*>::iterator pos_;
+        bool pos_set_;
         // std::unordered_multimap<std::string, InfoBlock *>::iterator mpos_;
         std::multimap<std::string, InfoBlock *>::iterator mpos_;
+        bool mpos_set_;
         uint32_t dataHashVal_;
         uint32_t repeatCount_;
         std::string mapKey_;
@@ -343,7 +356,9 @@ __next__:
 
                     for (int i = 0; i < n; ++i) {
                         // std::cout << "del " << (*pos)->line_ << std::endl;
-                        infoBlockMap.erase((*pos)->mPos());
+                        if ((*pos)->mpos_set()) {
+                            infoBlockMap.erase((*pos)->mPos());
+                        }
                         pos = infoBlockList.erase(pos);
                         gDelLineNb++;
                     }

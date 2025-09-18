@@ -27,6 +27,10 @@ extern "C" {
 static inline void __attribute__((__no_instrument_function__))
 print_filter_run(char is_find, char *newdata);
 
+__attribute__((__no_instrument_function__))
+inline static void 
+print_filter_ctx_init();
+
 #include "trace.h"
 
 typedef struct map_s {
@@ -65,9 +69,8 @@ typedef enum print_filter_work_mode {
     kdirect,
 } print_filter_work_mode_t;
 
-#define QUEUE_SIZE 30
+#define QUEUE_SIZE 10
 #define QUEUE_ITEM_SIZE 256
-#define QUEUE_TRACE_MAX_COUNT 10
 
 typedef struct print_filter {
     print_filter_work_mode_t mode;
@@ -79,7 +82,9 @@ typedef struct print_filter {
 
 print_filter_t __thread *print_filter_ctx;
 
-#define PRINT_FILTER_TRACE_COUNT 2
+char gfilter_filename[256];
+
+#define PRINT_FILTER_TRACE_COUNT 10
 #define PRINT_FILTER_KEYWORDS_MAX_NB 1024
 
 void *print_filter_keyaddr[PRINT_FILTER_KEYWORDS_MAX_NB];
@@ -88,6 +93,7 @@ int print_filter_keyaddr_nb;
 __attribute__((__no_instrument_function__))
 inline static void 
 print_filter_keyaddr_print() {
+    printf("%s %d\n", __func__, __LINE__);
     for (int i = 0; i < print_filter_keyaddr_nb; ++i) {
         printf("%p\n", print_filter_keyaddr[i]);
     }
@@ -154,6 +160,7 @@ log_append(const char *str)
 __attribute__((__no_instrument_function__))
 void *convert_to_elf(void *addr) 
 {
+    return addr;
     Dl_info info;
     int result = dladdr(addr, &info);
     if (result == 0) {
@@ -255,7 +262,7 @@ print_filter_run(char is_find, char *newdata)
         }
         else {
             print_filter_ctx->trace_count--;
-            if (print_filter_ctx->trace_count == 0)
+            if (print_filter_ctx->trace_count <= 0)
                 print_filter_ctx->mode = kcached;
         }
     }
@@ -271,6 +278,16 @@ __trace_running(const char *msg, void *this, void *call)
 
     char data[256];
     snprintf(data, sizeof(data), "%s\n%s:%p\n%s:%p\n", msg, call_sym, call, this_sym, this);
+
+    if (print_filter_ctx == NULL) {
+        if (print_filter_keyaddr_nb > 0) {
+            // 通过c++11 thread启动的线程,
+            // 因为无法通过hook pthread_create 初始化 print_filter_ctx,
+            // 只能在此处完成初始化
+            print_filter_ctx_init();
+        }
+    }
+
     // check filter
     if (print_filter_ctx) {
         int is_find = print_filter_keyaddr_check(this) || print_filter_keyaddr_check(call);
@@ -421,6 +438,7 @@ __attribute__((__no_instrument_function__))
 inline static void 
 print_filter_ctx_init()
 {
+    print_filter_ctx = NULL;
     if (print_filter_keyaddr_nb > 0) {
         print_filter_ctx = malloc(sizeof(*print_filter_ctx));
         memset(print_filter_ctx, 0x0, sizeof(*print_filter_ctx));
@@ -437,6 +455,9 @@ print_filter_init()
     char line[1024];
 
     snprintf(filter_filename, sizeof(filter_filename), "/var/run/filter_%s", ctx.name);
+    printf("filter_filename : %s\n", filter_filename);
+    strcpy(gfilter_filename, filter_filename);
+
     FILE *fp = fopen(filter_filename, "r");
     if (!fp) {
         return ;
@@ -452,7 +473,7 @@ print_filter_init()
 
     fclose(fp);
 
-    // print_filter_keyaddr_print();
+    print_filter_keyaddr_print();
 
     print_filter_ctx_init();
 }

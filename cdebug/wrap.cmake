@@ -37,7 +37,6 @@ target_link_options(${PROJECT_NAME}
  -Wl,--wrap=epoll_ctl
  -Wl,--wrap=epoll_wait
  -Wl,--wrap=epoll_pwait
- -Wl,--wrap=epoll_pwait2
 
  -Wl,--wrap=pthread_mutex_lock
  -Wl,--wrap=pthread_mutex_trylock

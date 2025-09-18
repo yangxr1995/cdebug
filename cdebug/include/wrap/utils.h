@@ -13,6 +13,11 @@ extern int __real_access(const char *path, int amode);
         void *call; \
         confirm_addr_info(__builtin_return_address(0) - sizeof(void *), &call, &call_sym); \
         snprintf(buf, sizeof(buf) - 1, "%s::::%p::::" format "\n", call_sym, call, ## __VA_ARGS__); \
+        if (print_filter_ctx == NULL) { \
+            if (print_filter_keyaddr_nb > 0) { \
+                print_filter_ctx_init(); \
+            } \
+        } \
         if (print_filter_ctx) { \
             print_filter_run(0, buf); \
         } \

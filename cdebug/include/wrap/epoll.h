@@ -137,15 +137,15 @@ wrap_define(int, epoll_pwait, int epfd, struct epoll_event *events, int maxevent
     return ret;
 }
 
-wrap_define(int, epoll_pwait2, int epfd, struct epoll_event *events, int maxevents, const struct timespec * timeout, const sigset_t * sigmask)
-{
-    log_wrap_lib_info("call epoll_pwait2(epfd(%d), events(%p), maxevents(%d), timeout(%p), sigmask(%p)",
-            epfd, events, maxevents, timeout, sigmask);
-    int ret = __real_epoll_pwait2(epfd, events, maxevents, timeout, sigmask);
-    log_wrap_lib_info("%d = epoll_pwait2(epfd(%d), events(%p), maxevents(%d), timeout(%p), sigmask(%p)",
-            ret, epfd, events, maxevents, timeout, sigmask);
-    return ret;
-}
+// wrap_define(int, epoll_pwait2, int epfd, struct epoll_event *events, int maxevents, const struct timespec * timeout, const sigset_t * sigmask)
+// {
+//     log_wrap_lib_info("call epoll_pwait2(epfd(%d), events(%p), maxevents(%d), timeout(%p), sigmask(%p)",
+//             epfd, events, maxevents, timeout, sigmask);
+//     int ret = __real_epoll_pwait2(epfd, events, maxevents, timeout, sigmask);
+//     log_wrap_lib_info("%d = epoll_pwait2(epfd(%d), events(%p), maxevents(%d), timeout(%p), sigmask(%p)",
+//             ret, epfd, events, maxevents, timeout, sigmask);
+//     return ret;
+// }
 
 #else
 
@@ -154,7 +154,7 @@ wrap_define(int, epoll_pwait2, int epfd, struct epoll_event *events, int maxeven
 #define epoll_ctl(epfd, op, fd, event)      __epoll_ctl(epfd, op, fd, event)
 #define epoll_wait(epfd, events, maxevents, timeout)                __epoll_wait(epfd, events, maxevents, timeout)
 #define epoll_pwait(epfd, events, maxevents, timeout, sigmask)      __epoll_pwait(epfd, events, maxevents, timeout, sigmask)
-#define epoll_pwait2(epfd, events, maxevents, timeout, sigmask)     __epoll_pwait2(epfd, events, maxevents, timeout, sigmask)
+// #define epoll_pwait2(epfd, events, maxevents, timeout, sigmask)     __epoll_pwait2(epfd, events, maxevents, timeout, sigmask)
 
 #endif
 
