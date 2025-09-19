@@ -119,13 +119,16 @@ print_filter_keyaddr_print() {
 
 #endif
 
+int gtrace_on;
+
 // wrap_define(pid_t, fork)
 pid_t __real_fork();
 __attribute__((__no_instrument_function__))
 pid_t __wrap_fork()
 {
     int ret;
-    if (access(ctx.trace_on, F_OK) == 0) {
+    // if (access(ctx.trace_on, F_OK) == 0) {
+    if (gtrace_on) {
         char buf[256] = {0}, *call_sym;
         void *call;
         confirm_addr_info(__builtin_return_address(0) - sizeof(void *), &call, &call_sym);
@@ -158,6 +161,7 @@ log_append(const char *str)
     close(fd);
 }
 
+inline static
 __attribute__((__no_instrument_function__))
 void *convert_to_elf(void *addr) 
 {
@@ -302,8 +306,10 @@ __trace_running(const char *msg, void *this, void *call)
 static inline void __attribute__((__no_instrument_function__))
 trace_running(const char *msg, void *this, void *call)
 {
-    if (access(ctx.trace_on, F_OK) == 0)
+    if (access(ctx.trace_on, F_OK) == 0) {
+        gtrace_on = 1;
 		__trace_running(msg, this, call);
+    }
 }
 
 #include <dlfcn.h>

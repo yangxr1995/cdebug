@@ -5,10 +5,10 @@ extern "C" {
 #ifndef __WRAP_UTILS_H__
 #define __WRAP_UTILS_H__
 
-extern int __real_access(const char *path, int amode);
+extern int gtrace_on;
 
 #define log_wrap_lib_info(format, ...) do { \
-    if (__real_access(ctx.trace_on, F_OK) == 0) { \
+   if ((gtrace_on) == 0) { \
         char buf[1024] = {0}, *call_sym; \
         void *call; \
         confirm_addr_info(__builtin_return_address(0) - sizeof(void *), &call, &call_sym); \
