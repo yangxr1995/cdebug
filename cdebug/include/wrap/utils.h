@@ -8,7 +8,7 @@ extern "C" {
 extern int gtrace_on;
 
 #define log_wrap_lib_info(format, ...) do { \
-   if ((gtrace_on) == 0) { \
+   if ((gtrace_on)) { \
         char buf[1024] = {0}, *call_sym; \
         void *call; \
         confirm_addr_info(__builtin_return_address(0) - sizeof(void *), &call, &call_sym); \
