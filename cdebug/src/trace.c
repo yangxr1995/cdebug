@@ -165,7 +165,7 @@ inline static
 __attribute__((__no_instrument_function__))
 void *convert_to_elf(void *addr) 
 {
-    return addr;
+    // return addr;
     Dl_info info;
     int result = dladdr(addr, &info);
     if (result == 0) {

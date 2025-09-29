@@ -23,8 +23,8 @@ target_compile_options(${PROJECT_NAME}
 
 
 target_link_options(${PROJECT_NAME}
-    PUBLIC -rdynamic
- -Wl,--wrap=fork 
+    PUBLIC -rdynamic -no-pie
+    PRIVATE -Wl,--wrap=fork 
 )
 
 # message("COMPILE_OPTIONS : ${INTERFACE_COMPILE_OPTIONS}")
