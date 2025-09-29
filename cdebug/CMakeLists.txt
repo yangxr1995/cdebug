@@ -23,7 +23,7 @@ target_compile_options(${PROJECT_NAME}
 
 
 target_link_options(${PROJECT_NAME}
-    PUBLIC -rdynamic -no-pie
+    PUBLIC -rdynamic
     -Wl,--wrap=fork 
 )
 
